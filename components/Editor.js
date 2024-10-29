@@ -79,11 +79,11 @@ export default function Editor() {
   return (
     <div className="h-screen w-full flex flex-col">
       {/* Top Bar */}
-      <div className="bg-black p-4 flex items-center">
+      <div className="bg-white p-4 flex items-center border-b">
         <Button variant="ghost" size="icon" className="hover:text-black">
-          <ArrowLeft className="h-6 w-6 text-white" />
+          <ArrowLeft className="h-6 w-6 text-" />
         </Button>
-        <h1 className="text-lg ml-4 text-white">Editor</h1>
+        <h1 className="text-lg ml-4 text-">Editor</h1>
       </div>
 
       <div className="flex-grow flex">
