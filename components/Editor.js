@@ -5,7 +5,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Collapsible,
   CollapsibleContent,
@@ -14,9 +14,13 @@ import {
 import Image from "next/image"
 import { Loader2 } from "lucide-react"
 import { HexColorPicker } from "react-colorful"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/router"
 
 export default function Editor() {
-  const [bgColor, setBgColor] = useState("#f5f5dc")  // Beige as default
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [bgColor, setBgColor] = useState("#f5f5dc")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState(null)
   const [selectedOption, setSelectedOption] = useState(null)
@@ -29,7 +33,51 @@ export default function Editor() {
   const [avatarSrc, setAvatarSrc] = useState("https://api.dicebear.com/9.x/notionists/svg")
   const fileInputRef = useRef(null)
 
-  const colors = ["#8b4513", "#deb887", "#cd5c5c", "#d2691e", "#f4a460"]  // Warm, muted English colors
+  // Authentication check
+  useEffect(() => {
+    if (status !== "loading" && !session) {
+      router.replace('/login')
+    }
+  }, [session, status, router])
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/' })
+  }
+
+  const handleOptionClick = (option) => {
+    setSelectedOption(option)
+    setIsLoading(true)
+    setTimeout(() => {
+      setIsLoading(false)
+    }, 2000)
+  }
+
+  const handleIconClick = () => {
+    setIsSidebarOpen(true)
+  }
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => setAvatarSrc(e.target.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Loading state
+  if (status === "loading") {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  // Not authenticated
+  if (!session) {
+    return null
+  }
 
   const platforms = [
     {
@@ -54,36 +102,26 @@ export default function Editor() {
     }
   ]
 
-  const handleOptionClick = (option) => {
-    setSelectedOption(option)
-    setIsLoading(true)
-    // Simulating API call
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
-  }
+  const colors = ["#8b4513", "#deb887", "#cd5c5c", "#d2691e", "#f4a460"]  // Warm, muted English colors
 
-  const handleIconClick = () => {
-    setIsSidebarOpen(true)
-  }
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => setAvatarSrc(e.target.result)
-      reader.readAsDataURL(file)
-    }
-  }
-
+  // Main render
   return (
     <div className="h-screen w-full flex flex-col">
       {/* Top Bar */}
-      <div className="bg-white p-4 flex items-center border-b">
-        <Button variant="ghost" size="icon" className="hover:text-black">
-          <ArrowLeft className="h-6 w-6 text-" />
-        </Button>
-        <h1 className="text-lg ml-4 text-">Editor</h1>
+      <div className="bg-white p-4 flex items-center justify-between border-b">
+        <h1 className="text-lg font-semibold">Editor</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600">
+            {session.user?.username || session.user?.email}
+          </span>
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+          >
+            Log out
+          </Button>
+        </div>
       </div>
 
       <div className="flex-grow flex">

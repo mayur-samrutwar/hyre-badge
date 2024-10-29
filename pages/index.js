@@ -1,8 +1,10 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Star } from "lucide-react"
+import { useSession, signOut } from "next-auth/react"
 
 export default function Component() {
+  const { data: session } = useSession()
+
   return (
     <div className="min-h-screen bg-white">
       <header className="fixed top-0 left-0 right-0 z-10 bg-white border-2 border-black mt-2 rounded-full flex justify-between items-center py-4 px-6 max-w-7xl mx-auto">
@@ -14,7 +16,21 @@ export default function Component() {
           </nav>
         </div>
         <div className="flex items-center space-x-4 font-semibold">
-          <Link href="#" className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800">Log in</Link>
+          {session ? (
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800"
+            >
+              Log out
+            </button>
+          ) : (
+            <Link 
+              href="/login" 
+              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800"
+            >
+              Log in
+            </Link>
+          )}
         </div>
       </header>
 

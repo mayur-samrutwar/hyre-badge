@@ -9,35 +9,69 @@ export const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        try {
+          const { db } = await connectToDatabase()
+          const existingUser = await db.collection('users').findOne({ email: user.email })
+          
+          if (!existingUser) {
+            await db.collection('users').insertOne({
+              email: user.email,
+              createdAt: new Date()
+            })
+          }
+          
+          return true
+        } catch (error) {
+          console.error("Error in signIn callback:", error)
+          return false
+        }
+      }
+      return false
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.includes('signout')) {
+        return '/'
+      }
+
       try {
         const { db } = await connectToDatabase()
+        const email = decodeURIComponent(url.split('email=')[1]?.split('&')[0] || '')
         
-        // Check if user exists
-        const existingUser = await db.collection('users').findOne({ email: user.email })
+        if (!email) {
+          return `${baseUrl}/select-username`
+        }
+
+        const existingUser = await db.collection('users').findOne({ email })
         
         if (!existingUser) {
-          // Create new user if doesn't exist
           await db.collection('users').insertOne({
-            email: user.email,
-            createdAt: new Date(),
+            email: email,
+            createdAt: new Date()
           })
+          return `${baseUrl}/select-username`
         }
         
-        return true
+        if (existingUser.username) {
+          return `${baseUrl}/test`
+        }
+        
+        return `${baseUrl}/select-username`
       } catch (error) {
-        console.error("Error in signIn callback:", error)
-        return false
+        console.error("Error in redirect callback:", error)
+        return `${baseUrl}/select-username`
       }
     },
     async session({ session }) {
       try {
         const { db } = await connectToDatabase()
-        const dbUser = await db.collection('users').findOne({ email: session.user.email })
+        const user = await db.collection('users').findOne({ email: session.user.email })
         
-        if (dbUser) {
-          session.user.username = dbUser.username
+        if (user) {
+          session.user.username = user.username
         }
         
         return session
@@ -45,40 +79,12 @@ export const authOptions = {
         console.error("Error in session callback:", error)
         return session
       }
-    },
-    async redirect({ url, baseUrl }) {
-      try {
-        // Extract email from the session token in the URL
-        const { db } = await connectToDatabase()
-        const email = decodeURIComponent(url.split('email=')[1]?.split('&')[0] || '')
-        
-        if (!email) {
-          return `${baseUrl}/test`
-        }
-
-        const existingUser = await db.collection('users').findOne({ email })
-        
-        // If user exists and has a username, go to test
-        if (existingUser?.username) {
-          return `${baseUrl}/test`
-        }
-        
-        // If user exists but no username, go to username selection
-        if (existingUser && !existingUser.username) {
-          return `${baseUrl}/select-username`
-        }
-        
-        // Default fallback
-        return `${baseUrl}/test`
-      } catch (error) {
-        console.error("Error in redirect callback:", error)
-        return `${baseUrl}/test`
-      }
     }
   },
   pages: {
     signIn: '/login',
-  },
+    error: '/login',
+  }
 }
 
 export default NextAuth(authOptions)
