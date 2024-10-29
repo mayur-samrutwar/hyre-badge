@@ -21,7 +21,6 @@ export const authOptions = {
           // Create new user if doesn't exist
           await db.collection('users').insertOne({
             email: user.email,
-            username: profile.name, // Using name from Google profile as username
             createdAt: new Date(),
           })
         }
@@ -32,19 +31,13 @@ export const authOptions = {
         return false
       }
     },
-    async session({ session, user }) {
+    async session({ session }) {
       try {
         const { db } = await connectToDatabase()
-        
-        // Get user data from database
         const dbUser = await db.collection('users').findOne({ email: session.user.email })
         
         if (dbUser) {
-          session.user.id = dbUser._id
           session.user.username = dbUser.username
-          // Remove name and image from session as per instructions
-          delete session.user.name
-          delete session.user.image
         }
         
         return session
@@ -52,10 +45,40 @@ export const authOptions = {
         console.error("Error in session callback:", error)
         return session
       }
+    },
+    async redirect({ url, baseUrl }) {
+      try {
+        // Extract email from the session token in the URL
+        const { db } = await connectToDatabase()
+        const email = decodeURIComponent(url.split('email=')[1]?.split('&')[0] || '')
+        
+        if (!email) {
+          return `${baseUrl}/test`
+        }
+
+        const existingUser = await db.collection('users').findOne({ email })
+        
+        // If user exists and has a username, go to test
+        if (existingUser?.username) {
+          return `${baseUrl}/test`
+        }
+        
+        // If user exists but no username, go to username selection
+        if (existingUser && !existingUser.username) {
+          return `${baseUrl}/select-username`
+        }
+        
+        // Default fallback
+        return `${baseUrl}/test`
+      } catch (error) {
+        console.error("Error in redirect callback:", error)
+        return `${baseUrl}/test`
+      }
     }
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/login',
+  },
 }
 
 export default NextAuth(authOptions)
-
