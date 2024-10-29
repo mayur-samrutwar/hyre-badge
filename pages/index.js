@@ -14,8 +14,7 @@ export default function Component() {
           </nav>
         </div>
         <div className="flex items-center space-x-4 font-semibold">
-          <Link href="#" className="text-black hover:text-gray-600">Log in</Link>
-          <Link href="#" className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800">Sign up</Link>
+          <Link href="#" className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800">Log in</Link>
         </div>
       </header>
 
