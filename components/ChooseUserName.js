@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 
 export default function ChooseUserName() {
@@ -7,6 +7,16 @@ export default function ChooseUserName() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    // Get preferred username from localStorage
+    const preferredUsername = localStorage.getItem('preferredUsername')
+    if (preferredUsername) {
+      setUsername(preferredUsername)
+      // Clear it after setting
+      localStorage.removeItem('preferredUsername')
+    }
+  }, [])
 
   const handleSubmit = async () => {
     setIsLoading(true)
