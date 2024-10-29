@@ -1,11 +1,11 @@
-import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft, Edit2, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,6 +22,12 @@ export default function Editor() {
   const [selectedOption, setSelectedOption] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [name, setName] = useState("John Doe")
+  const [bio, setBio] = useState("Software Developer | Open Source Enthusiast")
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [isEditingBio, setIsEditingBio] = useState(false)
+  const [avatarSrc, setAvatarSrc] = useState("https://api.dicebear.com/9.x/notionists/svg")
+  const fileInputRef = useRef(null)
 
   const colors = ["#8b4513", "#deb887", "#cd5c5c", "#d2691e", "#f4a460"]  // Warm, muted English colors
 
@@ -61,11 +67,20 @@ export default function Editor() {
     setIsSidebarOpen(true)
   }
 
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => setAvatarSrc(e.target.result)
+      reader.readAsDataURL(file)
+    }
+  }
+
   return (
     <div className="h-screen w-full flex flex-col">
       {/* Top Bar */}
       <div className="bg-black p-4 flex items-center">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="hover:text-black">
           <ArrowLeft className="h-6 w-6 text-white" />
         </Button>
         <h1 className="text-lg ml-4 text-white">Editor</h1>
@@ -137,10 +152,67 @@ export default function Editor() {
 
             {/* Preview Panel */}
             <ResizablePanel defaultSize={50}>
-              <div className="h-full p-4" style={{ backgroundColor: bgColor }}>
-                {/* Add your preview content here */}
-                <div className="rounded-md border p-4">
-                  Preview Content
+              <div className="h-full p-4 flex flex-col items-center" style={{ backgroundColor: bgColor }}>
+                <div className="text-center mb-4">
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={() => setIsEditingName(false)}
+                      className="text-2xl font-bold text-center bg-transparent border-b border-gray-300 focus:outline-none focus:border-blue-500"
+                      autoFocus
+                    />
+                  ) : (
+                    <h2 className="text-2xl font-bold flex items-center justify-center">
+                      {name}
+                      <Button variant="ghost" size="sm" onClick={() => setIsEditingName(true)} className="ml-2">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </h2>
+                  )}
+                </div>
+                <div className="relative mb-4">
+                  <img
+                    src={avatarSrc}
+                    alt="User Avatar"
+                    width={128}
+                    height={128}
+                    className="bg-white rounded-full"
+                  />
+                  <Button
+                    size="sm"
+                    className="absolute bottom-0 right-0 rounded-full p-2"
+                    onClick={() => fileInputRef.current.click()}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </div>
+                <div className="text-center mb-4">
+                  {isEditingBio ? (
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      onBlur={() => setIsEditingBio(false)}
+                      className="w-full text-sm text-center bg-transparent border border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500"
+                      rows={2}
+                      autoFocus
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600 flex items-center justify-center">
+                      {bio}
+                      <Button variant="ghost" size="sm" onClick={() => setIsEditingBio(true)} className="ml-2">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </p>
+                  )}
                 </div>
               </div>
             </ResizablePanel>
