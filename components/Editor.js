@@ -16,6 +16,8 @@ import { Loader2 } from "lucide-react"
 import { HexColorPicker } from "react-colorful"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/router"
+import { QRCodeSVG } from 'qrcode.react';
+import {ReclaimProofRequest} from '@reclaimprotocol/js-sdk';
 
 export default function Editor() {
   const { data: session, status } = useSession()
@@ -32,6 +34,10 @@ export default function Editor() {
   const [isEditingBio, setIsEditingBio] = useState(false)
   const [avatarSrc, setAvatarSrc] = useState("https://api.dicebear.com/9.x/notionists/svg")
   const fileInputRef = useRef(null)
+  const [verificationUrl, setVerificationUrl] = useState(null);
+  const [statusUrl, setStatusUrl] = useState(null);
+  const [proofData, setProofData] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState('pending'); // 'pending' | 'success' | 'failed'
 
   // Authentication check
   useEffect(() => {
@@ -44,13 +50,44 @@ export default function Editor() {
     signOut({ callbackUrl: '/' })
   }
 
-  const handleOptionClick = (option) => {
-    setSelectedOption(option)
-    setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
-  }
+  const handleOptionClick = async (option) => {
+    console.log('Starting verification for:', option);
+    setSelectedOption(option);
+    setIsLoading(true);
+    setProofData(null);
+    setVerificationStatus('pending');
+    
+    try {
+      const reclaimClient = await ReclaimProofRequest.init(
+        process.env.NEXT_PUBLIC_RECLAIM_APP_ID,
+        process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET,
+        process.env.NEXT_PUBLIC_RECLAIM_GITHUB_TOTAL_REPOS_PROVIDER_ID,
+        { log: true }
+      );
+
+      const requestUrl = await reclaimClient.getRequestUrl();
+      console.log('QR Code URL:', requestUrl);
+      setVerificationUrl(requestUrl);
+
+      await reclaimClient.startSession({
+        onSuccess: (proof) => {
+          console.log('✅ Verification Proof:', proof);
+          setProofData(proof);
+          setVerificationStatus('success');
+        },
+        onError: error => {
+          console.error('❌ Verification failed:', error);
+          setVerificationStatus('failed');
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in verification process:', error);
+      setVerificationStatus('failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleIconClick = () => {
     setIsSidebarOpen(true)
@@ -170,14 +207,36 @@ export default function Editor() {
               <div className="h-full p-4 flex flex-col items-center justify-center">
                 {isLoading ? (
                   <Loader2 className="h-8 w-8 animate-spin" />
-                ) : selectedOption ? (
+                ) : selectedOption && verificationUrl ? (
                   <>
-                    <div className="w-64 h-64 bg-gray-200 flex items-center justify-center mb-4">
-                      QR Code Placeholder
+                    <div className="w-64 h-64 bg-white p-4 flex items-center justify-center mb-4">
+                      <QRCodeSVG
+                        value={verificationUrl}
+                        size={256}
+                        level="H"
+                      />
                     </div>
-                    <p className="text-center text-sm text-muted-foreground">
-                      Scan this QR code to connect your {selectedOption} data
+                    <p className="text-center text-sm text-muted-foreground mb-4">
+                      Scan this QR code to verify your {selectedOption} data
                     </p>
+                    
+                    {/* Verification Status */}
+                    <div className="mt-4">
+                      {verificationStatus === 'pending' && (
+                        <p className="text-yellow-600">Waiting for verification...</p>
+                      )}
+                      {verificationStatus === 'failed' && (
+                        <p className="text-red-600">Verification failed. Please try again.</p>
+                      )}
+                      {verificationStatus === 'success' && proofData && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <h3 className="text-green-800 font-semibold mb-2">Verification Successful!</h3>
+                          <pre className="bg-white p-4 rounded text-sm overflow-auto max-h-48">
+                            {JSON.stringify(proofData, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <p>Select an option from the sidebar to get started</p>
