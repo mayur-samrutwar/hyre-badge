@@ -35,6 +35,16 @@ export default async function handler(req, res) {
       { $set: { username: username.toLowerCase() } }
     )
 
+    // Create cards entry
+    await db.collection('cards').insertOne({
+      username: username.toLowerCase(),
+      bg: 'f5f5dc',
+      name: 'John Doe',
+      bio: 'Software Developer | Open Source Enthusiast',
+      avatar: 'https://api.dicebear.com/9.x/notionists/svg',
+      info: {}
+    });
+
     return res.status(200).json({ success: true })
   } catch (error) {
     console.error('Error updating username:', error)

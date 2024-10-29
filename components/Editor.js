@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft, Edit2, Camera } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft, Edit2, Camera, CheckCircle2, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   ResizableHandle,
@@ -71,7 +71,16 @@ export default function Editor() {
 
       await reclaimClient.startSession({
         onSuccess: (proof) => {
-          console.log('✅ Verification Proof:', proof);
+          console.log('✅ Full Verification Proof:', proof);
+          
+          try {
+            const contextData = JSON.parse(proof.claimData.context);
+            const repoCount = contextData.extractedParameters.repositories;
+            console.log('📊 Total GitHub Repositories:', repoCount);
+          } catch (error) {
+            console.error('Error accessing repository count:', error);
+          }
+          
           setProofData(proof);
           setVerificationStatus('success');
         },
@@ -208,36 +217,43 @@ export default function Editor() {
                 {isLoading ? (
                   <Loader2 className="h-8 w-8 animate-spin" />
                 ) : selectedOption && verificationUrl ? (
-                  <>
-                    <div className="w-64 h-64 bg-white p-4 flex items-center justify-center mb-4">
-                      <QRCodeSVG
-                        value={verificationUrl}
-                        size={256}
-                        level="H"
-                      />
-                    </div>
-                    <p className="text-center text-sm text-muted-foreground mb-4">
-                      Scan this QR code to verify your {selectedOption} data
-                    </p>
-                    
-                    {/* Verification Status */}
-                    <div className="mt-4">
-                      {verificationStatus === 'pending' && (
-                        <p className="text-yellow-600">Waiting for verification...</p>
-                      )}
-                      {verificationStatus === 'failed' && (
-                        <p className="text-red-600">Verification failed. Please try again.</p>
-                      )}
-                      {verificationStatus === 'success' && proofData && (
-                        <div className="bg-green-50 p-4 rounded-lg">
-                          <h3 className="text-green-800 font-semibold mb-2">Verification Successful!</h3>
-                          <pre className="bg-white p-4 rounded text-sm overflow-auto max-h-48">
-                            {JSON.stringify(proofData, null, 2)}
-                          </pre>
+                  <div className="flex flex-col items-center">
+                    {verificationStatus !== 'success' ? (
+                      <>
+                        <div className="w-64 h-64 bg-white p-4 flex items-center justify-center mb-4 animate-in fade-in-0 duration-300">
+                          <QRCodeSVG
+                            value={verificationUrl}
+                            size={256}
+                            level="H"
+                          />
                         </div>
-                      )}
-                    </div>
-                  </>
+                        <p className="text-center text-sm text-muted-foreground mb-4">
+                          Scan this QR code to verify your {selectedOption} data
+                        </p>
+                        
+                        {verificationStatus === 'pending' && (
+                          <div className="flex items-center gap-2 text-yellow-600">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Waiting for verification...</span>
+                          </div>
+                        )}
+                        {verificationStatus === 'failed' && (
+                          <div className="flex items-center text-red-600 gap-2">
+                            <XCircle className="h-5 w-5" />
+                            <span>Verification failed. Please try again.</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-64 animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
+                        <div className="rounded-full bg-green-100 p-3 mb-4">
+                          <CheckCircle2 className="h-8 w-8 text-green-600" />
+                        </div>
+                        <p className="text-lg font-medium text-green-600">Successfully verified!</p>
+                        <p className="text-sm text-gray-500 mt-2">Your GitHub data has been verified</p>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p>Select an option from the sidebar to get started</p>
                 )}
