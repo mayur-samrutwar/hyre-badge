@@ -39,6 +39,10 @@ export default function Editor() {
   const [statusUrl, setStatusUrl] = useState(null);
   const [proofData, setProofData] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState('pending'); // 'pending' | 'success' | 'failed'
+  const [isNameUpdating, setIsNameUpdating] = useState(false);
+  const [isBioUpdating, setIsBioUpdating] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const [tempBio, setTempBio] = useState("");
 
   // Authentication check
   useEffect(() => {
@@ -107,14 +111,77 @@ export default function Editor() {
     setIsSidebarOpen(true)
   }
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
     if (file) {
       const reader = new FileReader()
-      reader.onload = (e) => setAvatarSrc(e.target.result)
+      reader.onload = async (e) => {
+        const newAvatarSrc = e.target.result;
+        try {
+          const res = await fetch('/api/update-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ avatar: newAvatarSrc })
+          });
+
+          if (!res.ok) throw new Error('Failed to update avatar');
+          
+          setAvatarSrc(newAvatarSrc);
+        } catch (error) {
+          console.error('Error updating avatar:', error);
+        }
+      }
       reader.readAsDataURL(file)
     }
-  }
+  };
+
+  const handleNameEdit = () => {
+    setTempName(name);
+    setIsEditingName(true);
+    setIsNameUpdating(true);
+  };
+
+  const handleBioEdit = () => {
+    setTempBio(bio);
+    setIsEditingBio(true);
+    setIsBioUpdating(true);
+  };
+
+  const handleNameUpdate = async () => {
+    try {
+      const res = await fetch('/api/update-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: tempName })
+      });
+
+      if (!res.ok) throw new Error('Failed to update name');
+      
+      setName(tempName);
+      setIsEditingName(false);
+      setIsNameUpdating(false);
+    } catch (error) {
+      console.error('Error updating name:', error);
+    }
+  };
+
+  const handleBioUpdate = async () => {
+    try {
+      const res = await fetch('/api/update-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: tempBio })
+      });
+
+      if (!res.ok) throw new Error('Failed to update bio');
+      
+      setBio(tempBio);
+      setIsEditingBio(false);
+      setIsBioUpdating(false);
+    } catch (error) {
+      console.error('Error updating bio:', error);
+    }
+  };
 
   // Loading state
   if (status === "loading") {
@@ -249,18 +316,33 @@ export default function Editor() {
               <div className="h-full p-4 flex flex-col items-center" style={{ backgroundColor: bgColor }}>
                 <div className="text-center mb-4">
                   {isEditingName ? (
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onBlur={() => setIsEditingName(false)}
-                      className="text-2xl font-bold text-center bg-transparent border-b border-gray-300 focus:outline-none focus:border-blue-500"
-                      autoFocus
-                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <input
+                        type="text"
+                        value={tempName}
+                        onChange={(e) => setTempName(e.target.value)}
+                        className="text-2xl font-bold text-center bg-transparent border-b border-gray-300 focus:outline-none focus:border-blue-500"
+                        autoFocus
+                      />
+                      {isNameUpdating && (
+                        <Button 
+                          size="sm" 
+                          onClick={handleNameUpdate}
+                          className="mt-2"
+                        >
+                          Update
+                        </Button>
+                      )}
+                    </div>
                   ) : (
                     <h2 className="text-2xl font-bold flex items-center justify-center">
                       {name}
-                      <Button variant="ghost" size="sm" onClick={() => setIsEditingName(true)} className="ml-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleNameEdit} 
+                        className="ml-2"
+                      >
                         <Edit2 className="h-4 w-4" />
                       </Button>
                     </h2>
@@ -291,18 +373,33 @@ export default function Editor() {
                 </div>
                 <div className="text-center mb-4">
                   {isEditingBio ? (
-                    <textarea
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      onBlur={() => setIsEditingBio(false)}
-                      className="w-full text-sm text-center bg-transparent border border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500"
-                      rows={2}
-                      autoFocus
-                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <textarea
+                        value={tempBio}
+                        onChange={(e) => setTempBio(e.target.value)}
+                        className="w-full text-sm text-center bg-transparent border border-gray-300 rounded p-2 focus:outline-none focus:border-blue-500"
+                        rows={2}
+                        autoFocus
+                      />
+                      {isBioUpdating && (
+                        <Button 
+                          size="sm" 
+                          onClick={handleBioUpdate}
+                          className="mt-2"
+                        >
+                          Update
+                        </Button>
+                      )}
+                    </div>
                   ) : (
                     <p className="text-sm text-gray-600 flex items-center justify-center">
                       {bio}
-                      <Button variant="ghost" size="sm" onClick={() => setIsEditingBio(true)} className="ml-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleBioEdit} 
+                        className="ml-2"
+                      >
                         <Edit2 className="h-4 w-4" />
                       </Button>
                     </p>
