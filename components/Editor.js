@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft, Edit2, Camera, CheckCircle2, XCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Palette, Github, Code2, ArrowLeft, Edit2, Camera, CheckCircle2, XCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   ResizableHandle,
@@ -43,6 +43,7 @@ export default function Editor() {
   const [isBioUpdating, setIsBioUpdating] = useState(false);
   const [tempName, setTempName] = useState("");
   const [tempBio, setTempBio] = useState("");
+  const [proofCards, setProofCards] = useState([]);
 
   // Authentication check
   useEffect(() => {
@@ -119,6 +120,17 @@ export default function Editor() {
           console.log('✅ Full Verification Proof:', proof);
           setProofData(proof);
           setVerificationStatus('success');
+          
+          // Parse the context data to get the repository count
+          const contextData = JSON.parse(proof.claimData.context);
+          const repoCount = contextData.extractedParameters.repositories;
+          
+          // Add the proof data as a new card with the correct value
+          setProofCards(prev => [...prev, {
+            label: "Total Repositories",
+            value: repoCount,
+            id: Date.now()
+          }]);
         },
         onError: error => {
           console.error('❌ Verification failed:', error);
@@ -213,6 +225,10 @@ export default function Editor() {
     } catch (error) {
       console.error('Error updating bio:', error);
     }
+  };
+
+  const handleDeleteCard = (cardId) => {
+    setProofCards(prev => prev.filter(card => card.id !== cardId));
   };
 
   // Loading state
@@ -436,6 +452,27 @@ export default function Editor() {
                       </Button>
                     </p>
                   )}
+                </div>
+                <div className="w-full mt-4 space-y-3">
+                  {proofCards.map(card => (
+                    <div 
+                      key={card.id}
+                      className="group flex items-center justify-between bg-white/60 backdrop-blur-md rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="font-semibold text-gray-700">{card.label}:</span>
+                        <span className="text-gray-600">{card.value}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteCard(card.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </ResizablePanel>
