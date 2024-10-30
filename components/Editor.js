@@ -131,13 +131,13 @@ export default function Editor() {
           setProofData(proof);
           setVerificationStatus('success');
           
-          // Parse the context data to get the repository count
+          // Parse the context data
           const contextData = JSON.parse(proof.claimData.context);
-          const repoCount = contextData.extractedParameters.repositories;
+          const value = contextData.extractedParameters[provider.extractKey];
           
           const newCard = {
-            label: "Total Repositories",
-            value: repoCount,
+            label: provider.label,
+            value,
             id: Date.now()
           };
 
@@ -153,7 +153,7 @@ export default function Editor() {
             // Merge existing info with new card
             const updatedInfo = {
               ...currentInfo,
-              [newCard.label]: newCard.value
+              [provider.label]: value
             };
 
             // Update the database with merged data
