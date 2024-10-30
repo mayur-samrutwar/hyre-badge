@@ -18,6 +18,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/router"
 import { QRCodeSVG } from 'qrcode.react';
 import {ReclaimProofRequest} from '@reclaimprotocol/js-sdk';
+import { PLATFORMS } from '@/lib/platforms';
 
 export default function Editor() {
   const { data: session, status } = useSession()
@@ -25,7 +26,7 @@ export default function Editor() {
   const [bgColor, setBgColor] = useState("#f5f5dc")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedPlatform, setSelectedPlatform] = useState(null)
-  const [selectedOption, setSelectedOption] = useState(null)
+  const [selectedProviderId, setSelectedProviderId] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [name, setName] = useState("John Doe")
@@ -50,9 +51,16 @@ export default function Editor() {
     signOut({ callbackUrl: '/' })
   }
 
-  const handleOptionClick = async (option) => {
-    console.log('Starting verification for:', option);
-    setSelectedOption(option);
+  const handleOptionClick = async (providerId, provider) => {
+    console.log('Starting verification with details:', {
+      providerId,
+      provider,
+      appId: process.env.NEXT_PUBLIC_RECLAIM_APP_ID,
+      appSecret: process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET,
+      reclaimProviderId: provider.providerId
+    });
+    
+    setSelectedProviderId(providerId);
     setIsLoading(true);
     setProofData(null);
     setVerificationStatus('pending');
@@ -61,26 +69,18 @@ export default function Editor() {
       const reclaimClient = await ReclaimProofRequest.init(
         process.env.NEXT_PUBLIC_RECLAIM_APP_ID,
         process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET,
-        process.env.NEXT_PUBLIC_RECLAIM_GITHUB_TOTAL_REPOS_PROVIDER_ID,
-        { log: true }
+        provider.providerId
       );
 
+      console.log('ReclaimClient initialized:', reclaimClient);
+
       const requestUrl = await reclaimClient.getRequestUrl();
-      console.log('QR Code URL:', requestUrl);
+      console.log('Generated QR Code URL:', requestUrl);
       setVerificationUrl(requestUrl);
 
       await reclaimClient.startSession({
         onSuccess: (proof) => {
           console.log('✅ Full Verification Proof:', proof);
-          
-          try {
-            const contextData = JSON.parse(proof.claimData.context);
-            const repoCount = contextData.extractedParameters.repositories;
-            console.log('📊 Total GitHub Repositories:', repoCount);
-          } catch (error) {
-            console.error('Error accessing repository count:', error);
-          }
-          
           setProofData(proof);
           setVerificationStatus('success');
         },
@@ -92,6 +92,11 @@ export default function Editor() {
 
     } catch (error) {
       console.error('Error in verification process:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       setVerificationStatus('failed');
     } finally {
       setIsLoading(false);
@@ -125,31 +130,7 @@ export default function Editor() {
     return null
   }
 
-  const platforms = [
-    {
-      name: "GitHub",
-      logo: "/logos/github.svg",
-      options: ["Total Repositories", "Total Stars"]
-    },
-    {
-      name: "LeetCode",
-      logo: "/logos/leetcode.png",
-      options: ["Total Questions Solved", "Total Hard Questions"]
-    },
-    {
-      name: "CodeChef",
-      logo: "/logos/codechef.svg",
-      options: ["Rating"]
-    },
-    {
-      name: "Codeforces",
-      logo: "/logos/codeforces.png",
-      options: ["Rating"]
-    }
-  ]
-
-  const colors = ["#8b4513", "#deb887", "#cd5c5c", "#d2691e", "#f4a460"]  // Warm, muted English colors
-
+  const colors = ["#8b4513", "#deb887", "#cd5c5c", "#d2691e", "#f4a460"] 
 
   // Main render
   return (
@@ -174,7 +155,7 @@ export default function Editor() {
         {/* Sidebar */}
         <div className={`h-full ${isSidebarOpen ? 'w-64' : 'w-16'} bg-black transition-all duration-300 ease-in-out flex flex-col relative`}>
           <div className="flex-grow overflow-y-auto py-4">
-            {platforms.map((platform) => (
+            {Object.values(PLATFORMS).map((platform) => (
               <Collapsible key={platform.name} className="mb-6">
                 <CollapsibleTrigger 
                   className="flex items-center w-full p-3 rounded hover:bg-gray-800 text-white transition-colors duration-200"
@@ -185,13 +166,13 @@ export default function Editor() {
                 </CollapsibleTrigger>
                 {isSidebarOpen && (
                   <CollapsibleContent>
-                    {platform.options.map((option) => (
+                    {Object.values(platform.providers).map((provider) => (
                       <Button
-                        key={option}
+                        key={provider.id}
                         className="w-full justify-start pl-10 my-1 text-gray-300 hover:text-white hover:bg-gray-800 transition-colors duration-200"
-                        onClick={() => handleOptionClick(option)}
+                        onClick={() => handleOptionClick(provider.id, provider)}
                       >
-                        {option}
+                        {provider.label}
                       </Button>
                     ))}
                   </CollapsibleContent>
@@ -216,7 +197,7 @@ export default function Editor() {
               <div className="h-full p-4 flex flex-col items-center justify-center">
                 {isLoading ? (
                   <Loader2 className="h-8 w-8 animate-spin" />
-                ) : selectedOption && verificationUrl ? (
+                ) : selectedProviderId && verificationUrl ? (
                   <div className="flex flex-col items-center">
                     {verificationStatus !== 'success' ? (
                       <>
@@ -228,7 +209,7 @@ export default function Editor() {
                           />
                         </div>
                         <p className="text-center text-sm text-muted-foreground mb-4">
-                          Scan this QR code to verify your {selectedOption} data
+                          Scan this QR code to verify your {selectedProviderId} data
                         </p>
                         
                         {verificationStatus === 'pending' && (

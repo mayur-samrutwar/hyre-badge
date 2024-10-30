@@ -6,42 +6,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { provider } = req.body;
-    console.log('Initializing verification for provider:', provider);
+    const { providerId, providerEnvKey } = req.body;
+    console.log('Initializing verification for provider:', providerId);
     
-    const providerIds = {
-      'Total Repositories': process.env.RECLAIM_GITHUB_TOTAL_REPOS_PROVIDER_ID,
-      'Total Stars': process.env.RECLAIM_GITHUB_TOTAL_CONTRIBUTIONS_PROVIDER_ID,
-      'Total Questions Solved': process.env.RECLAIM_LEETCODE_TOTAL_SOLVED_PROVIDER_ID,
-      'Rating': process.env.RECLAIM_CODEFORCES_RATING_PROVIDER_ID,
-    };
-
-    const providerId = providerIds[provider];
-    if (!providerId) {
-      console.error('Invalid provider:', provider);
-      return res.status(400).json({ error: 'Invalid provider' });
+    const reclaimProviderId = process.env[providerEnvKey];
+    if (!reclaimProviderId) {
+      console.error('Provider ID not configured:', providerEnvKey);
+      return res.status(500).json({ error: 'Provider not configured' });
     }
 
-    console.log('Using provider ID:', providerId);
+    console.log('Using provider ID:', reclaimProviderId);
     const reclaimProofRequest = await ReclaimProofRequest.init(
-      process.env.RECLAIM_APP_ID,
-      process.env.RECLAIM_APP_SECRET,
-      providerId
+      process.env.NEXT_PUBLIC_RECLAIM_APP_ID,
+      process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET,
+      reclaimProviderId
     );
 
     const requestUrl = await reclaimProofRequest.getRequestUrl();
     const statusUrl = reclaimProofRequest.getStatusUrl();
     console.log('Generated URLs:', { requestUrl, statusUrl });
-
-    // Start the session
-    reclaimProofRequest.startSession({
-      onSuccessCallback: (proofs) => {
-        console.log('Verification success callback:', proofs);
-      },
-      onFailureCallback: (error) => {
-        console.error('Verification failure callback:', error);
-      }
-    });
 
     res.status(200).json({ requestUrl, statusUrl });
   } catch (error) {
