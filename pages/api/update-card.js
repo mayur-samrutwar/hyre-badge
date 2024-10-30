@@ -22,6 +22,7 @@ export default async function handler(req, res) {
     if (updates.bio !== undefined) updateFields.bio = updates.bio;
     if (updates.avatar !== undefined) updateFields.avatar = updates.avatar;
     if (updates.bg !== undefined) updateFields.bg = updates.bg.replace('#', '');
+    if (updates.info !== undefined) updateFields.info = updates.info;
 
     // Only proceed if there are fields to update
     if (Object.keys(updateFields).length === 0) {

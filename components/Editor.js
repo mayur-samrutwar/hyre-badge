@@ -63,6 +63,16 @@ export default function Editor() {
             setBio(userData.bio);
             setAvatarSrc(userData.avatar);
             setBgColor(`#${userData.bg}`);
+            
+            // Convert info object to cards array
+            if (userData.info) {
+              const cards = Object.entries(userData.info).map(([label, value]) => ({
+                label,
+                value,
+                id: Date.now() + Math.random() // Generate unique ID
+              }));
+              setProofCards(cards);
+            }
           } else {
             // Use default values if no data exists
             setName("John Doe");
@@ -116,7 +126,7 @@ export default function Editor() {
       setVerificationUrl(requestUrl);
 
       await reclaimClient.startSession({
-        onSuccess: (proof) => {
+        onSuccess: async (proof) => {
           console.log('✅ Full Verification Proof:', proof);
           setProofData(proof);
           setVerificationStatus('success');
@@ -125,12 +135,42 @@ export default function Editor() {
           const contextData = JSON.parse(proof.claimData.context);
           const repoCount = contextData.extractedParameters.repositories;
           
-          // Add the proof data as a new card with the correct value
-          setProofCards(prev => [...prev, {
+          const newCard = {
             label: "Total Repositories",
             value: repoCount,
             id: Date.now()
-          }]);
+          };
+
+          // Add the proof data as a new card
+          setProofCards(prev => [...prev, newCard]);
+
+          try {
+            // First fetch current card data
+            const getCurrentCards = await fetch('/api/get-card');
+            const currentData = await getCurrentCards.json();
+            const currentInfo = currentData.info || {};
+
+            // Merge existing info with new card
+            const updatedInfo = {
+              ...currentInfo,
+              [newCard.label]: newCard.value
+            };
+
+            // Update the database with merged data
+            const res = await fetch('/api/update-card', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                info: updatedInfo
+              })
+            });
+
+            if (!res.ok) {
+              throw new Error('Failed to update card info');
+            }
+          } catch (error) {
+            console.error('Error updating card info:', error);
+          }
         },
         onError: error => {
           console.error('❌ Verification failed:', error);
@@ -227,8 +267,30 @@ export default function Editor() {
     }
   };
 
-  const handleDeleteCard = (cardId) => {
+  const handleDeleteCard = async (cardId) => {
+    const cardToDelete = proofCards.find(card => card.id === cardId);
     setProofCards(prev => prev.filter(card => card.id !== cardId));
+
+    try {
+      const updatedInfo = proofCards
+        .filter(card => card.id !== cardId)
+        .reduce((acc, card) => ({
+          ...acc,
+          [card.label]: card.value
+        }), {});
+
+      const res = await fetch('/api/update-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ info: updatedInfo })
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update card info');
+      }
+    } catch (error) {
+      console.error('Error updating card info:', error);
+    }
   };
 
   // Loading state

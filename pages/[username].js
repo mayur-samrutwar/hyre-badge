@@ -17,18 +17,25 @@ export default function UserProfile({ userData, error }) {
           <img
             src={userData.avatar}
             alt={userData.name}
-            className="w-32 h-32 rounded-full bg-white mb-4"
+            className="w-32 h-32 rounded-full bg-white mb-4 border-4 border-white shadow-lg"
           />
-          <h1 className="text-2xl font-bold mb-2">{userData.name}</h1>
-          <p className="text-gray-600 mb-8">{userData.bio}</p>
+          <h1 className="text-3xl font-bold mb-2 text-gray-800">{userData.name}</h1>
+          <p className="text-lg text-gray-600 mb-8 text-center">{userData.bio}</p>
           
-          {/* Render info object if it exists */}
-          {Object.entries(userData.info).map(([key, value]) => (
-            <div key={key} className="mb-4">
-              <h3 className="font-semibold">{key}</h3>
-              <p>{value}</p>
-            </div>
-          ))}
+          {/* Display info cards */}
+          <div className="w-full space-y-4">
+            {Object.entries(userData.info || {}).map(([label, value]) => (
+              <div 
+                key={label}
+                className="flex items-center justify-between bg-white/80 backdrop-blur-md rounded-xl p-6 shadow-lg border border-gray-200 transition-all duration-300 hover:shadow-xl hover:scale-105"
+              >
+                <div className="flex items-center space-x-4">
+                  <span className="font-semibold text-gray-800 text-lg">{label}</span>
+                  <span className="text-gray-600 text-lg font-medium">{value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
