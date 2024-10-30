@@ -51,6 +51,38 @@ export default function Editor() {
     }
   }, [session, status, router])
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (session?.user?.username) {
+        try {
+          const res = await fetch('/api/get-card');
+          if (res.ok) {
+            const userData = await res.json();
+            setName(userData.name);
+            setBio(userData.bio);
+            setAvatarSrc(userData.avatar);
+            setBgColor(`#${userData.bg}`);
+          } else {
+            // Use default values if no data exists
+            setName("John Doe");
+            setBio("Software Developer | Open Source Enthusiast");
+            setAvatarSrc("https://api.dicebear.com/9.x/notionists/svg");
+            setBgColor("#f5f5dc");
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          // Use default values on error
+          setName("John Doe");
+          setBio("Software Developer | Open Source Enthusiast");
+          setAvatarSrc("https://api.dicebear.com/9.x/notionists/svg");
+          setBgColor("#f5f5dc");
+        }
+      }
+    };
+  
+    fetchUserData();
+  }, [session]);
+
   const handleLogout = () => {
     signOut({ callbackUrl: '/' })
   }
